@@ -89,7 +89,11 @@ defmodule EzParser do
   end
 
   defp parse_line(state, custom) do
-    parse_method_or_property(state, "private", parse_custom_type(custom), custom)
+    case Regex.match?(~r/(?<=^)_\w+/, custom) do
+      true -> "private"
+      false -> "public"
+    end
+    |> (&parse_method_or_property(state, &1, parse_custom_type(custom), custom)).()
   end
 
   @spec parse_method_or_property(state, String.t, String.t, String.t) :: state
