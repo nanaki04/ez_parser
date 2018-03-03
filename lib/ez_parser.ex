@@ -26,7 +26,36 @@ defmodule EzParser do
     |> State.File.name
     |> File.read!
     |> String.split("\n")
-    |> Enum.reduce(state, &parse_line(&2, String.trim &1))
+    |> Enum.reduce(state, &transform(&2, &1))
+  end
+
+  @spec transform(state, String.t) :: state
+  defp transform(state, line) do
+    line
+    |> String.trim
+    |> replace_global_aliases
+    |> (&parse_line state, &1).()
+  end
+
+  @spec replace_global_aliases(String.t) :: String.t
+  defp replace_global_aliases(line) do
+    line
+    |> String.replace(~r/(?<=\s)ob-(\w+)(?=\s)/, "IObservable<\\1>")
+    |> String.replace(~r/(?<=^)ob-(\w+)(?=\s)/, "IObservable<\\1>")
+    |> String.replace(~r/(?<=\s)_ob-(\w+)(?=\s)/, "_IObservable<\\1>")
+    |> String.replace(~r/(?<=^)_ob-(\w+)(?=\s)/, "_IObservable<\\1>")
+    |> String.replace(~r/(?<=\s)l-(\w+)(?=\s)/, "List<\\1>")
+    |> String.replace(~r/(?<=^)l-(\w+)(?=\s)/, "List<\\1>")
+    |> String.replace(~r/(?<=\s)_l-(\w+)(?=\s)/, "_List<\\1>")
+    |> String.replace(~r/(?<=^)_l-(\w+)(?=\s)/, "_List<\\1>")
+    |> String.replace(~r/<i>/, "<int>")
+    |> String.replace(~r/<f>/, "<float>")
+    |> String.replace(~r/<s>/, "<string>")
+    |> String.replace(~r/<b>/, "<bool>")
+    |> String.replace(~r/\[i\]/, "int[]")
+    |> String.replace(~r/\[s\]/, "string[]")
+    |> String.replace(~r/\[f\]/, "float[]")
+    |> String.replace(~r/\[b\]/, "bool[]")
   end
 
   @spec parse_line(state, String.t) :: state
@@ -76,6 +105,10 @@ defmodule EzParser do
     parse_method_or_property(state, "public", "float", float)
   end
 
+  defp parse_line(state, "b " <> float) do
+    parse_method_or_property(state, "public", "bool", float)
+  end
+
   defp parse_line(state, "_i " <> int) do
     parse_method_or_property(state, "private", "int", int)
   end
@@ -86,6 +119,10 @@ defmodule EzParser do
 
   defp parse_line(state, "_f " <> float) do
     parse_method_or_property(state, "private", "float", float)
+  end
+
+  defp parse_line(state, "_b " <> float) do
+    parse_method_or_property(state, "private", "bool", float)
   end
 
   defp parse_line(state, custom) do
@@ -122,6 +159,8 @@ defmodule EzParser do
   end
 
   @spec parse_method_parameter(state, String.t) :: state
+  defp parse_method_parameter(state, ""), do: state
+
   defp parse_method_parameter(state, "i " <> int) do
     parse_method_parameter(state, "int", int)
   end
@@ -132,6 +171,10 @@ defmodule EzParser do
 
   defp parse_method_parameter(state, "f " <> int) do
     parse_method_parameter(state, "float", int)
+  end
+
+  defp parse_method_parameter(state, "b " <> int) do
+    parse_method_parameter(state, "bool", int)
   end
 
   defp parse_method_parameter(state, custom) do
