@@ -126,11 +126,15 @@ defmodule EzParser do
   end
 
   defp parse_line(state, custom) do
-    case Regex.match?(~r/(?<=^)_\w+/, custom) do
+    accessibility = case Regex.match?(~r/(?<=^)_\w+/, custom) do
       true -> "private"
       false -> "public"
     end
-    |> (&parse_method_or_property(state, &1, parse_custom_type(custom), custom)).()
+    case accessibility do
+      "private" -> Regex.replace(~r/(?<=^)_(?=\w)/, custom, "")
+      _ -> custom
+    end
+    |> (&parse_method_or_property(state, accessibility, parse_custom_type(&1), &1)).()
   end
 
   @spec parse_method_or_property(state, String.t, String.t, String.t) :: state
@@ -205,7 +209,7 @@ defmodule EzParser do
 
   @spec parse_custom_type(String.t) :: String.t
   defp parse_custom_type(line) do
-    (Regex.run(~r/(?<=^)[\w<>]+(?=\s)/, line) || ["var"]) |> hd
+    (Regex.run(~r/(?<=^)[\w<>.]+(?=\s)/, line) || ["var"]) |> hd
   end
 
   @spec parse_name(String.t) :: String.t
