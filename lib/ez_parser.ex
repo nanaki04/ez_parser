@@ -59,6 +59,10 @@ defmodule EzParser do
   end
 
   @spec parse_line(state, String.t) :: state
+  defp parse_line(state, "") do
+    state
+  end
+
   defp parse_line(state, "ns " <> namespace) do
     state.parser_state
     |> State.File.add_namespace(%State.Namespace{})
